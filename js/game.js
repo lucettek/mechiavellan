@@ -125,6 +125,7 @@ export class Game {
 
   openHangar() {
     this.state = 'hangar';
+    this.shake = 0;
     this.hangar.open();
   }
 
@@ -151,8 +152,7 @@ export class Game {
     this.time += dt;
 
     if (this.state === 'hangar') {
-      // Idle drift so the parallax moves behind the hangar overlay.
-      this.camera.x += 60 * dt;
+      // The battlefield is hidden in the hangar, so there is nothing to animate.
       return;
     }
 
@@ -458,6 +458,10 @@ export class Game {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
+    // The hangar is a DOM overlay; hide the battlefield entirely behind it so
+    // leftover camera shake and terrain do not show through.
+    if (this.state === 'hangar') return;
+
     const shakeX = this.shake ? rand(-this.shake, this.shake) : 0;
     const shakeY = this.shake ? rand(-this.shake, this.shake) : 0;
 
@@ -465,18 +469,16 @@ export class Game {
     ctx.translate(shakeX, shakeY);
     this.world.draw(ctx, this.camera, this.view);
 
-    if (this.state !== 'hangar') {
-      ctx.save();
-      ctx.translate(-Math.round(this.camera.x), 0);
-      this.drawBeacon(ctx);
-      this.particles.draw(ctx);
-      if (this.player) this.player.drawBeams(ctx);
-      for (const enemy of this.enemies) enemy.draw(ctx);
-      if (this.player && !this.player.dead) this.player.draw(ctx);
-      for (const box of this.ammoBoxes) box.draw(ctx);
-      for (const bullet of this.bullets) bullet.draw(ctx);
-      ctx.restore();
-    }
+    ctx.save();
+    ctx.translate(-Math.round(this.camera.x), 0);
+    this.drawBeacon(ctx);
+    this.particles.draw(ctx);
+    if (this.player) this.player.drawBeams(ctx);
+    for (const enemy of this.enemies) enemy.draw(ctx);
+    if (this.player && !this.player.dead) this.player.draw(ctx);
+    for (const box of this.ammoBoxes) box.draw(ctx);
+    for (const bullet of this.bullets) bullet.draw(ctx);
+    ctx.restore();
     ctx.restore();
 
     const vg = ctx.createRadialGradient(
