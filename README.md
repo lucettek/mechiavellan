@@ -30,7 +30,9 @@ redeploy the same loadout.
 
 1. **Chassis** — hardpoint count, hull, speed, agility, armour and heat sink.
 2. **Hardpoints** — select a weapon, click a hardpoint to install; click a filled
-   hardpoint to clear it. Duplicates allowed. The readout shows the loadout's
+   hardpoint to clear it, or use the `×` on the slot to clear just that one.
+   Selecting a different weapon first swaps it in place. Duplicates allowed. The
+   readout shows the loadout's
    heat balance, burst and sustained damage, and how many hardpoints need ammo.
 3. **Armory** — every weapon, with its delivery mode, range, damage and ammo.
 

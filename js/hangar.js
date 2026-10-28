@@ -132,15 +132,28 @@ export class Hangar {
   }
 
   /**
-   * Clicking a hardpoint installs the selected weapon, or clears it when
-   * nothing is selected.
+   * Clicking a hardpoint installs the selected weapon, swaps in a different
+   * one, or clears it. Clearing wins whenever the slot already holds the
+   * selected weapon (or nothing is selected), so the "click to clear" hint is
+   * always truthful — the old code installed the selection unconditionally,
+   * which made filled hardpoints impossible to clear while a weapon was armed.
    */
   _place(index) {
-    if (this.selectedId) {
+    const current = this.slots[index];
+    if (!current) {
+      if (this.selectedId) this.slots[index] = this.selectedId;
+    } else if (this.selectedId && this.selectedId !== current) {
       this.slots[index] = this.selectedId;
-    } else if (this.slots[index]) {
+    } else {
       this.slots[index] = null;
     }
+    this.render();
+  }
+
+  /** Clear one hardpoint. Backs the per-slot "×" control. */
+  _clearSlot(index) {
+    if (!this.slots[index]) return;
+    this.slots[index] = null;
     this.render();
   }
 
@@ -205,19 +218,56 @@ export class Hangar {
     for (let i = 0; i < this.frame.slots; i++) {
       const id = this.slots[i];
       const weapon = WEAPONS.find((w) => w.id === id) || null;
-      const slot = document.createElement('button');
-      slot.type = 'button';
+      // A <button> cannot legally contain another <button>, so the slot is a
+      // div with button semantics and the clear control is a real button.
+      const slot = document.createElement('div');
       slot.className = `slot ${weapon ? 'slot--filled' : 'slot--empty'}`;
+      slot.setAttribute('role', 'button');
+      slot.tabIndex = 0;
+
+      let hint;
+      if (weapon) {
+        hint =
+          this.selectedId && this.selectedId !== weapon.id ? 'click to replace' : 'click to clear';
+      } else {
+        hint = this.selectedId ? 'click to install' : 'select a weapon';
+      }
+
       slot.innerHTML = weapon
         ? `<span class="slot__idx">HP-${i + 1}</span>
            <span class="slot__abbr" style="color:${weapon.color}">${weapon.abbr}</span>
            <span class="slot__name">${weapon.name}</span>
-           <span class="slot__hint">click to clear</span>`
+           <span class="slot__hint">${hint}</span>
+           <button class="slot__clear" type="button" title="Clear HP-${i + 1}"
+             aria-label="Clear HP-${i + 1} (${weapon.name})">&times;</button>`
         : `<span class="slot__idx">HP-${i + 1}</span>
            <span class="slot__abbr">--</span>
            <span class="slot__name">Empty</span>
-           <span class="slot__hint">${this.selectedId ? 'click to install' : 'select a weapon'}</span>`;
+           <span class="slot__hint">${hint}</span>`;
+
+      slot.setAttribute(
+        'aria-label',
+        weapon ? `HP-${i + 1}: ${weapon.name}. ${hint}.` : `HP-${i + 1}: empty. ${hint}.`
+      );
+
       slot.addEventListener('click', () => this._place(i));
+      slot.addEventListener('keydown', (e) => {
+        // Ignore keys aimed at the nested clear button.
+        if (e.target !== slot) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this._place(i);
+        }
+      });
+
+      const clear = slot.querySelector('.slot__clear');
+      if (clear) {
+        clear.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this._clearSlot(i);
+        });
+      }
+
       this.els.hardpoints.appendChild(slot);
     }
   }
